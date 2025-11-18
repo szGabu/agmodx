@@ -174,6 +174,8 @@ new gCvarVoteDuration;
 new gCvarVoteOldStyle;
 new gCvarAllowVoteBots;
 
+new gCvarChatAgSay;
+
 new gCvarAgStartMinPlayers;
 
 new gCvarAmxNextMap;
@@ -283,6 +285,9 @@ public plugin_precache() {
 	gCvarAllowedGameModes = create_cvar("sv_ag_allowed_gamemodes", "", FCVAR_SERVER);
 	gCvarGameMode = create_cvar("sv_ag_gamemode", "tdm", FCVAR_SERVER);
 	create_cvar("sv_ag_gametype", "", FCVAR_SERVER);
+
+	// Style cvars
+	gCvarChatAgSay = create_cvar("sv_ag_say", "1");
 
 	// Start player health/armor and LJ
 	gCvarStartHealth = create_cvar("sv_ag_start_health", "100");
@@ -1073,6 +1078,9 @@ public SendToSpec(taskid) {
 * AG Say
 */
 public MsgSayText(msg_id, msg_dest, receiver) {
+	if(!get_pcvar_bool(gCvarChatAgSay))
+		return PLUGIN_CONTINUE;
+
 	new text[191]; // 192 will crash the sv by overflow if someone send a large message with a lot of %l, %w, etc...
 	
 	get_msg_arg_string(2, text, charsmax(text)); // get user message
