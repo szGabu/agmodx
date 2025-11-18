@@ -499,12 +499,24 @@ bool:IsPluginFirstLoad() {
 
 // TODO: allow to load startup_server.cfg from subfolders to match BHL behaviour
 LoadStartupServerCfg() {
-	new serverCfg[256];
+	new serverCfg[256], startupServerCfg[256];
 	get_cvar_string("servercfgfile", serverCfg, charsmax(serverCfg));
+
 	if (!serverCfg[0]) {
-		return;
+		// default value should be "server.cfg", if not set agmodx will fail to properly start
+		format(startupServerCfg, charsmax(startupServerCfg), "startup_server.cfg");
+		copy(serverCfg, charsmax(serverCfg), "server.cfg");
 	}
-	server_cmd("exec startup_%s", serverCfg); // no need to add .cfg at the end
+
+	if(file_exists(startupServerCfg)) {
+		server_cmd("exec %s", startupServerCfg);
+	}
+	else {
+		// this is the behavior of BHL, altough not expected if the file doesn't exist, AGModX will
+		// fail to properly start
+		server_cmd("exec %s", serverCfg);
+	}
+
 	server_exec();
 }
 
