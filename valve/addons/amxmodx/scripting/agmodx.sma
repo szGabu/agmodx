@@ -151,6 +151,7 @@ new Float:gVoteDisplayNextThink = -1.0;
 // cvar pointers
 new gCvarAgTimer;
 new gCvarContact;
+new gCvarOverridePlayerEquip;
 new gCvarAllowedGameModes;
 new gCvarGameMode;
 new gCvarHudColor;
@@ -261,6 +262,7 @@ public plugin_precache() {
 	gCvarSpecTalk = create_cvar("ag_spectalk", "0", FCVAR_SERVER);
 	gCvarContact = get_cvar_pointer("sv_contact");
 	gCvarAgTimer = create_cvar("ag_usetimer", "1", FCVAR_SERVER);
+	gCvarOverridePlayerEquip = create_cvar("ag_override_player_equip", "0", FCVAR_SERVER);
 		
 	// Allowed vote cvars
 	gCvarAllowVote = create_cvar("sv_ag_allow_vote", "1", FCVAR_SERVER);
@@ -2981,7 +2983,12 @@ FindGamePlayerEquip() {
 	while ((ent = find_ent_by_class(ent, "game_player_equip"))) {
 		// ignore the ones with use flag, they don't give weapons to all players
 		if (!(pev(ent, pev_spawnflags) & SF_PLAYEREQUIP_USEONLY))
-			return ent;
+		{
+			if(get_pcvar_bool(gCvarOverridePlayerEquip))
+				set_pev(ent, pev_flags, pev(ent, pev_flags) | FL_KILLME);
+			else
+				return ent;
+		}
 	}
 	return 0;
 }
