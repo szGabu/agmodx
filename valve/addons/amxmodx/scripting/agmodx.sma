@@ -398,6 +398,11 @@ public plugin_precache() {
 	server_cmd("exec gamemodes/%s.cfg", mode);
 	server_exec();
 	ExecuteForward(fwPostConfig, fwReturnTemp);
+
+	gAgTimer = get_pcvar_bool(gCvarAgTimer);
+
+	InitAgTimer();
+	StartAgTimer();
 }
 
 public plugin_natives() {
@@ -497,14 +502,6 @@ public plugin_init() {
 	CreateVoteSystem();
 	LoadGameMode();
 	BanGamemodeEnts();
-
-	gAgTimer = get_pcvar_bool(gCvarAgTimer);
-
-	if(gAgTimer)
-	{
-		InitAgTimer();
-		StartAgTimer();
-	}
 }
 
 bool:IsPluginFirstLoad() {
@@ -560,7 +557,9 @@ public plugin_cfg() {
 }
 
 public plugin_end() {
-	disable_cvar_hook(gHookCvarTimeLimit);
+	if(gAgTimer)
+		disable_cvar_hook(gHookCvarTimeLimit);
+		
 	set_pcvar_num(gCvarTimeLimit, gTimeLimit);
 
 	// i use this handle in general
@@ -758,11 +757,10 @@ public CmdTimeLeft(id) {
 * AG Timer System
 */
 public InitAgTimer() {
-	//this is dumb, but whatever
+	gTimeLimit = get_pcvar_num(gCvarTimeLimit);
+
 	if(gAgTimer)
 	{
-		gTimeLimit = get_pcvar_num(gCvarTimeLimit);
-	
 		// from now, i'm gonna use my own timer
 		// by-pass timelimit from gamerules by setting it to unlimited time
 		// add an unprintable character to keep the unlimited time
@@ -773,7 +771,7 @@ public InitAgTimer() {
 
 StartAgTimer() {
 	remove_task(TASK_AGTIMER);
-	gTimeLeft = gTimeLimit > 0 ? gTimeLimit * 60 : 0;
+	gTimeLeft = gAgTimer ? (gTimeLimit > 0 ? gTimeLimit * 60 : 0) : get_timeleft();
 	if (CheckAgTimer()) {
 		ShowAgTimer();
 		set_task_ex(1.0, "AgTimerThink", TASK_AGTIMER, .flags = SetTask_Repeat);
@@ -781,7 +779,11 @@ StartAgTimer() {
 }
 
 public AgTimerThink() {
-	gTimeLeft--;
+	if(gAgTimer)
+		gTimeLeft--;
+	else 
+		gTimeLeft = get_timeleft();
+
 	if (CheckAgTimer())
 		ShowAgTimer();
 }
@@ -792,7 +794,7 @@ CheckAgTimer() {
 		return false;
 	}
 
-	if (gTimeLeft == 0 && gTimeLimit != 0) {
+	if (gTimeLeft == 0 && gTimeLimit != 0) { //untested with no ag timer
 		if (gVersusStarted && IsSuddenDeathNeeded()) {
 			gIsSuddenDeath = true;
 			if(gAgTimer)
