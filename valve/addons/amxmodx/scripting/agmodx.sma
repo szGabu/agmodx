@@ -60,6 +60,7 @@ new Float:gDeathLocation[MAX_PLAYERS + 1][3];
 new bool:gGamePlayerEquipExists;
 
 // timeleft / timelimit system
+new bool:gAgTimer; 
 new gTimeLeft; // if timeleft is set to -1, it means unlimited time
 new gTimeLimit;
 
@@ -148,6 +149,7 @@ new Float:gVoteDisplayNextThink = -1.0;
 // ============= END vote system ===============
 
 // cvar pointers
+new gCvarAgTimer;
 new gCvarContact;
 new gCvarAllowedGameModes;
 new gCvarGameMode;
@@ -258,6 +260,7 @@ public plugin_precache() {
 	gCvarAgStartMinPlayers = create_cvar("sv_ag_start_minplayers", "2", FCVAR_SERVER);
 	gCvarSpecTalk = create_cvar("ag_spectalk", "0", FCVAR_SERVER);
 	gCvarContact = get_cvar_pointer("sv_contact");
+	gCvarAgTimer = create_cvar("ag_usetimer", "1", FCVAR_SERVER);
 		
 	// Allowed vote cvars
 	gCvarAllowVote = create_cvar("sv_ag_allow_vote", "1", FCVAR_SERVER);
@@ -490,10 +493,16 @@ public plugin_init() {
 	RegisterHam(Ham_Use, "func_recharge", "FwChargersUse");
 
 	CreateVoteSystem();
-	InitAgTimer();
-	StartAgTimer();
 	LoadGameMode();
 	BanGamemodeEnts();
+
+	gAgTimer = get_pcvar_bool(gCvarAgTimer);
+
+	if(gAgTimer)
+	{
+		InitAgTimer();
+		StartAgTimer();
+	}
 }
 
 bool:IsPluginFirstLoad() {
@@ -747,13 +756,17 @@ public CmdTimeLeft(id) {
 * AG Timer System
 */
 public InitAgTimer() {
-	gTimeLimit = get_pcvar_num(gCvarTimeLimit);
+	//this is dumb, but whatever
+	if(gAgTimer)
+	{
+		gTimeLimit = get_pcvar_num(gCvarTimeLimit);
 	
-	// from now, i'm gonna use my own timer
-	// by-pass timelimit from gamerules by setting it to unlimited time
-	// add an unprintable character to keep the unlimited time
-	set_pcvar_string(gCvarTimeLimit, fmt("%c%d", 2, gTimeLimit)); 
-	gHookCvarTimeLimit = hook_cvar_change(gCvarTimeLimit, "CvarTimeLimitHook");
+		// from now, i'm gonna use my own timer
+		// by-pass timelimit from gamerules by setting it to unlimited time
+		// add an unprintable character to keep the unlimited time
+		set_pcvar_string(gCvarTimeLimit, fmt("%c%d", 2, gTimeLimit)); 
+		gHookCvarTimeLimit = hook_cvar_change(gCvarTimeLimit, "CvarTimeLimitHook");
+	}
 }
 
 StartAgTimer() {
@@ -780,6 +793,8 @@ CheckAgTimer() {
 	if (gTimeLeft == 0 && gTimeLimit != 0) {
 		if (gVersusStarted && IsSuddenDeathNeeded()) {
 			gIsSuddenDeath = true;
+			if(gAgTimer)
+				set_pcvar_num(gCvarTimeLimit, 0);
 		} else {
 			StartIntermissionMode();
 			remove_task(TASK_AGTIMER);
@@ -790,12 +805,16 @@ CheckAgTimer() {
 	return true;
 }
 
-public ShowAgTimer() {
+public ShowAgTimer()
+{
 	new r = gHudRed;
 	new g = gHudGreen;
 	new b = gHudBlue;
 
 	new timerText[128];
+
+	if(!gAgTimer)
+		gTimeLimit == get_timeleft();
 
 	// unlimited time
 	if (gTimeLimit == 0) {
